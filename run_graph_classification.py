@@ -1,3 +1,7 @@
+import collections
+import collections.abc
+for type_name in collections.abc.__all__:
+    setattr(collections, type_name, getattr(collections.abc, type_name))
 from attrdict import AttrDict
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils import to_networkx, from_networkx, to_dense_adj

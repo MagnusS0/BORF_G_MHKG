@@ -7,7 +7,7 @@ from torch.utils.data import random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from math import inf
 
-from models.node_model import GCN
+from models.node_model import GCN, Net
 
 default_args = AttrDict(
     {"learning_rate": 1e-3,
@@ -33,7 +33,7 @@ default_args = AttrDict(
     )
 
 class Experiment:
-    def __init__(self, args=None, dataset=None, train_mask=None, validation_mask=None, test_mask=None):
+    def __init__(self, args=None, dataset=None, model=None, train_mask=None, validation_mask=None, test_mask=None):
         self.args = default_args + args
         self.dataset = dataset
         self.train_mask = train_mask
@@ -49,7 +49,10 @@ class Experiment:
         if self.args.hidden_layers is None:
             self.args.hidden_layers = [self.args.hidden_dim] * self.args.num_layers
 
-        self.model = GCN(self.args).to(self.args.device)
+        if model is None:
+            self.model = GCN(self.args).to(self.args.device)
+        else:
+            self.model = model.to(self.args.device)
 
         if self.test_mask is None:
             node_indices = list(range(self.num_nodes))

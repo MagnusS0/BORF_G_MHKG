@@ -1,8 +1,13 @@
+import collections
+import collections.abc
+for type_name in collections.abc.__all__:
+    setattr(collections, type_name, getattr(collections.abc, type_name))
 from attrdict import AttrDict
 from torch_geometric.datasets import WebKB, WikipediaNetwork, Actor, Planetoid
 from torch_geometric.utils import to_networkx, from_networkx, to_undirected
 from torch_geometric.transforms import LargestConnectedComponents, ToUndirected
 from experiments.node_classification import Experiment
+from models.node_model import GCN, RGINConv, G_MHKG, Net
 
 import time
 import torch
@@ -34,10 +39,10 @@ def log_to_file(message, filename="results/node_classification.txt"):
 
 default_args = AttrDict({
     "dropout": 0.5,
-    "num_layers": 3,
+    "num_layers": 7,
     "hidden_dim": 128,
     "learning_rate": 1e-3,
-    "layer_type": "R-GCN",
+    "layer_type": "G_MHKG",
     "display": True,
     "num_trials": 10,
     "eval_every": 1,
@@ -48,7 +53,7 @@ default_args = AttrDict({
     "dataset": None,
     "borf_batch_add" : 4,
     "borf_batch_remove" : 2,
-    "sdrf_remove_edges" : False
+    "sdrf_remove_edges" : False,
 })
 
 
@@ -102,7 +107,14 @@ for key in datasets:
         print(f"TRIAL #{trial+1}")
         test_accs = []
         for i in range(args.num_splits):
-            train_acc, validation_acc, test_acc = Experiment(args=args, dataset=dataset).run()
+            if args.layer_type == "G_MHKG":
+                model = Net(num_features=dataset.num_features, 
+                            nhid=args.hidden_dim, num_classes=dataset.num_classes, num_nodes=dataset.data.x.shape[0],
+                            dropout_prob=args.dropout, num_layers=args.num_layers)
+                model.initialize_graph(dataset.data)
+                train_acc, validation_acc, test_acc = Experiment(args=args, dataset=dataset, model=model).run()
+            else:
+                train_acc, validation_acc, test_acc = Experiment(args=args, dataset=dataset).run()
             test_accs.append(test_acc)
         test_acc = max(test_accs)
         accuracies.append(test_acc)
@@ -121,7 +133,8 @@ for key in datasets:
         "avg_accuracy": np.mean(accuracies),
         "ci":  2 * np.std(accuracies)/(args.num_trials ** 0.5),
         "run_duration" : run_duration,
-        "rewiring_duration" : rewiring_duration
+        "rewiring_duration" : rewiring_duration,
+        "num_layers": args.num_layers,
     })
     results_df = pd.DataFrame(results)
     with open(f'results/node_classification_{args.layer_type}_{args.rewiring}.csv', 'a') as f:
