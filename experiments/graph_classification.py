@@ -51,7 +51,7 @@ class Experiment:
         if self.args.input_dim is None:
             self.args.input_dim = self.dataset[0].x.shape[1]
         for graph in self.dataset:
-            if not "edge_type" in graph.keys:
+            if not "edge_type" in graph.keys():
                 num_edges = graph.edge_index.shape[1]
                 graph.edge_type = torch.zeros(num_edges, dtype=int)
         if self.args.num_relations is None:

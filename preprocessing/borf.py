@@ -157,7 +157,7 @@ def _preprocess_data(data, is_undirected=False):
     m = data.edge_index.shape[1]
 
     # Compute the adjacency matrix
-    if not "edge_type" in data.keys:
+    if not "edge_type" in data.keys():
         edge_type = np.zeros(m, dtype=int)
     else:
         edge_type = data.edge_type
