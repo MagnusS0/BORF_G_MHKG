@@ -7,7 +7,7 @@ from torch.utils.data import random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from math import inf
 
-from models.node_model import GCN, Net
+from models.node_model import GCN, G_MHKG
 
 default_args = AttrDict(
     {"learning_rate": 1e-3,
@@ -64,7 +64,7 @@ class Experiment:
             self.train_mask, self.validation_mask = train_test_split(non_test, test_size=self.args.validation_fraction/(self.args.validation_fraction + self.args.train_fraction))
         
     def run(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate, weight_decay=self.args.weight_decay)
         scheduler = ReduceLROnPlateau(optimizer,  patience=25)
 
         if self.args.display:

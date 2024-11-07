@@ -7,7 +7,7 @@ from torch_geometric.datasets import WebKB, WikipediaNetwork, Actor, Planetoid
 from torch_geometric.utils import to_networkx, from_networkx, to_undirected
 from torch_geometric.transforms import LargestConnectedComponents, ToUndirected
 from experiments.node_classification import Experiment
-from models.node_model import GCN, RGINConv, G_MHKG, Net
+from models.node_model import GCN, RGINConv, G_MHKG
 
 import time
 import torch
@@ -23,9 +23,10 @@ texas = WebKB(root="data", name="Texas")
 chameleon = WikipediaNetwork(root="data", name="chameleon")
 cora = Planetoid(root="data", name="cora")
 citeseer = Planetoid(root="data", name="citeseer")
+pubmed = Planetoid(root="data", name="pubmed")
 datasets = {"cornell": cornell, "wisconsin": wisconsin, "texas": texas, 
         "chameleon": chameleon,
-        "cora": cora, "citeseer": citeseer}
+        "cora": cora, "citeseer": citeseer, "pubmed": pubmed}
 
 for key in datasets:
     dataset = datasets[key]
@@ -101,14 +102,14 @@ for key in datasets:
     end = time.time()
     rewiring_duration = end - start
 
-    # print(rewiring.spectral_gap(to_networkx(dataset.data, to_undirected=True)))
+    #print(rewiring.spectral_gap(to_networkx(dataset.data, to_undirected=True)))
     start = time.time()
     for trial in range(args.num_trials):
         print(f"TRIAL #{trial+1}")
         test_accs = []
         for i in range(args.num_splits):
             if args.layer_type == "G_MHKG":
-                model = Net(num_features=dataset.num_features, 
+                model = G_MHKG(num_features=dataset.num_features, 
                             nhid=args.hidden_dim, num_classes=dataset.num_classes, num_nodes=dataset.data.x.shape[0],
                             dropout_prob=args.dropout, num_layers=args.num_layers)
                 model.initialize_graph(dataset.data)

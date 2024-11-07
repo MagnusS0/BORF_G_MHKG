@@ -71,9 +71,9 @@ class GCN(torch.nn.Module):
                 x = self.dropout(x)
         return x
 
-class G_MHKG(nn.Module):
+class G_MHKGConv(nn.Module):
     def __init__(self, in_features, out_features, num_nodes, bias=True):
-        super(G_MHKG, self).__init__()
+        super(G_MHKGConv, self).__init__()
         self.W = nn.Parameter(torch.Tensor(in_features, out_features))
         self.filter_1 = nn.Parameter(torch.Tensor(num_nodes, 1))
         self.filter_2 = nn.Parameter(torch.Tensor(num_nodes, 1))
@@ -91,34 +91,32 @@ class G_MHKG(nn.Module):
             nn.init.zeros_(self.bias)
 
     def forward(self, eigen_vectors, lp, hp, x):
-        x = torch.matmul(x, self.W)
-        x_1 = torch.mm(lp, eigen_vectors.T)
-        x_1 = torch.mm(x_1, x)
-        x_1 = self.filter_1 * x_1
-        x_1 = torch.mm(eigen_vectors, x_1)
+        x = x @ self.W
+        x_1 = lp @ eigen_vectors.T @ x
+        x_1 *= self.filter_1
+        x_1 = eigen_vectors @ x_1
 
-        x_2 = torch.mm(hp, eigen_vectors.T)
-        x_2 = torch.mm(x_2, x)
-        x_2 = self.filter_2 * x_2
-        x_2 = torch.mm(eigen_vectors, x_2)
+        x_2 = hp @ eigen_vectors.T @ x
+        x_2 *= self.filter_2
+        x_2 = eigen_vectors @ x_2
 
         x = x_1 + x_2
         if self.bias is not None:
             x += self.bias
         return x
 
-class Net(nn.Module):
+class G_MHKG(nn.Module):
     def __init__(self, num_features, nhid, num_classes, num_nodes, num_layers=2, device='cuda',
-                 activation=F.relu, dropout_prob=0.3, initial_dyn_coefficient=1.1, delayed_hfd=False):
-        super(Net, self).__init__()
-        self.GConv1 = G_MHKG(num_features, nhid, num_nodes)
+                 activation=F.sigmoid, dropout_prob=0.3, initial_dyn_coefficient=1.1, delayed_hfd=False):
+        super(G_MHKG, self).__init__()
+        self.GConv1 = G_MHKGConv(num_features, nhid, num_nodes)
         self.layers = num_layers
         if num_layers > 2:
             self.hidden_layers = nn.ModuleList([
-                G_MHKG(nhid, nhid, num_nodes)
+                G_MHKGConv(nhid, nhid, num_nodes)
                 for _ in range(self.layers - 2)
             ])
-        self.GConv2 = G_MHKG(nhid, num_classes, num_nodes)
+        self.GConv2 = G_MHKGConv(nhid, num_classes, num_nodes)
         self.drop1 = nn.Dropout(dropout_prob)
         self.act = activation
         self.initial_dyn_coefficient = initial_dyn_coefficient
